@@ -1,0 +1,36 @@
+default:
+  PROJECT_NAME: SocialNetwork
+  PROJECT_DESCRIPTION: Test task for Alt Kraft company. Social network service
+  VERSION: 0.0.1
+  TAGS_METADATA:
+    - name: comments
+      description: Operations with comments
+    - name: health check
+      description: Service health check
+  CONTACTS:
+    name: Ilya Kochankov
+    email: ilyakochankov@yandex.ru
+  DEBUG: true
+  PORT: 8000
+  DB_USER:
+  DB_PASSWORD:
+  DB_HOST:
+  DB_PORT:
+  DB_URL: "@format mongodb://{this.DB_USER}:{this.DB_PASSWORD}@{this.DB_HOST}:{this.DB_PORT}"
+  DB_NAME: social_network
+
+development:
+  DB_USER: root
+  DB_PASSWORD: example
+  DB_HOST: localhost
+  DB_PORT: 27017
+
+production:
+  DEBUG: false
+
+testing:
+  DEBUG: true
+  DB_USER: test
+  DB_PASSWORD: test
+  DB_HOST: localhost
+  DB_PORT: 27018

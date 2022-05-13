@@ -1,0 +1,135 @@
+---
+version: "3"
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: zookeeper
+    restart: always
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - main
+
+  broker:
+    image: confluentinc/cp-kafka:7.0.1
+    hostname: broker
+    container_name: broker
+    restart: always
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://broker:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - main
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --list --bootstrap-server broker:9092"]
+      interval: 30s
+      timeout: 60s
+      retries: 120
+
+  init-kafka:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: init-kafka
+    depends_on:
+      broker:
+        condition: service_healthy
+    command: "bash -c 'echo Create topics ... && \
+      kafka-topics --create --if-not-exists --bootstrap-server broker:29092 --partitions 3 --replication-factor 1 --topic comments && \
+      echo Topics created'"
+    networks:
+      - main
+
+  mongo:
+    image: mongo:5.0.8
+    container_name: mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    networks:
+      - main
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo mongo:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  producer:
+    build: ./producer
+    container_name: producer
+    restart: always
+    depends_on:
+      broker:
+        condition: service_healthy
+      init-kafka:
+        condition: service_completed_successfully
+    volumes:
+      - ./scripts:/scripts
+    environment:
+      KAFKA_HOST: broker
+      KAFKA_PORT: 29092
+      TOPIC: comments
+    networks:
+      - main
+
+  consumer:
+    build: ./consumer
+    container_name: consumer
+    restart: always
+    depends_on:
+      broker:
+        condition: service_healthy
+      init-kafka:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_HOST: broker
+      KAFKA_PORT: 29092
+      TOPIC: comments
+      MONGO_HOST: mongo
+      MONGO_PORT: 27017
+      MONGO_USER: root
+      MONGO_PASSWORD: example
+      CONSUMER_GROUP: default
+    deploy:
+      mode: replicated
+      replicas: 3
+    networks:
+      - main
+
+  service:
+    build: ./service
+    container_name: service
+    restart: always
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      DB_HOST: mongo
+      DB_PORT: 27017
+      DB_USER: root
+      DB_PASSWORD: example
+      ENV_FOR_DYNACONF: production
+    ports:
+      - "8000:8000"
+    networks:
+      - main
+    healthcheck:
+      test: ["CMD-SHELL", "bash scripts/fastApi-health-check.sh"]
+      interval: 30s
+      timeout: 5s
+      retries: 4
+
+networks:
+  main:
+    driver: bridge
