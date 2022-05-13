@@ -4,6 +4,9 @@
 
 ---
 
+[![CodeFactor](https://www.codefactor.io/repository/github/kochankovid/alt-kraft-test-task/badge)](https://www.codefactor.io/repository/github/kochankovid/alt-kraft-test-task)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/c91e2cc5dbe44a27bacdbd4420a69a20)](https://www.codacy.com/gh/KochankovID/Alt-Kraft-test-task/dashboard?utm_source=github.com&utm_medium=referral&utm_content=KochankovID/Alt-Kraft-test-task&utm_campaign=Badge_Grade)
+
 ![img.png](img.png)
 
 Необходимо реализовать архитектуру, изображенную на рисунке. Система состоит из трех сервисов, написанных на python, очереди сообщений kafka и базы данных.
